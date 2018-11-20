@@ -1,10 +1,16 @@
 import FileSaver from 'file-saver';
 import { argv } from 'yargs';
 import axios from 'axios';
+import child_process from 'child_process';
 import fs from 'fs-extra';
 import klaw from 'klaw';
 import os from 'os';
 import path from 'path';
+
+const API_SERVICE_PATH = path.resolve(__dirname, './NeteaseCloudMusicApi/app.js');
+child_process.spawn('/usr/local/bin/node', [API_SERVICE_PATH], {
+  detached: true,
+});
 
 const NeteaseService = 'http://localhost:3000';
 
@@ -12,13 +18,16 @@ const AUDIO_EXT = ['.flac','.mp3','.aac','.ogg','.m4a','.wav','.ape','.aiff'];
 
 const targetPath = argv.path ? argv.path.replace('~', os.homedir()) : '.';
 
-const items = [];
-klaw(targetPath)
-  .on('data', item => items.push(item.path))
-  .on('end', () => {
-    const songs = items.filter(o => AUDIO_EXT.includes(path.extname(o)));
-    handleSongs(songs);
-  });
+setTimeout(() => {
+  console.log('PROCESSING START...');
+  const items = [];
+  klaw(targetPath)
+    .on('data', item => items.push(item.path))
+    .on('end', () => {
+      const songs = items.filter(o => AUDIO_EXT.includes(path.extname(o)));
+      handleSongs(songs);
+    });
+}, 3000);
 
 function handleSongs(songs) {
   songs.forEach(song => {
