@@ -8,6 +8,8 @@ import klaw from 'klaw';
 import os from 'os';
 import path from 'path';
 
+const SORTED_DIR = 'SORTED';
+
 const NODE_BIN = '/usr/local/bin/node';
 const API_SERVICE_PATH = path.resolve(__dirname, './NeteaseCloudMusicApi/app.js');
 const serviceProcess = child_process.spawn(NODE_BIN, [API_SERVICE_PATH], {
@@ -28,11 +30,14 @@ klaw(targetPath)
 function checkApiServer() {
   axios.get(NeteaseService).then(() => {
     console.log(colors.green('开始处理...'));
-    const songs = items.filter(o => AUDIO_EXT.includes(path.extname(o)));
+    const songs = items.filter(o => o.indexOf(SORTED_DIR) < 0 && AUDIO_EXT.includes(path.extname(o)));
     handleSongs(songs);
   }).catch((error) => {
-    console.log(error.toString());
-    checkApiServer();
+    if (error.code === 'ECONNREFUSED') {
+      checkApiServer();
+    } else {
+      serviceProcess.kill('SIGINT');
+    }
   });
 }
 
@@ -46,11 +51,12 @@ function handleSongs(songs) {
     }).then((response) => {
       const { picUrl, name } = response.data.album;
       const artist = songName.split('-')[0];
-      const targetDir = path.join(targetPath, 'sorted', artist, name);
+      const targetDir = path.join(targetPath, SORTED_DIR, artist, name);
       return organizeSong(song, picUrl, targetDir);
     }).then(() => {
       count += 1;
       if (count >= songs.length) {
+        console.log(colors.green('全部处理完成'));
         serviceProcess.kill('SIGINT');
       }
     }).catch((error) => {
@@ -73,9 +79,16 @@ function organizeSong(song, picUrl, downloadDir) {
   fs.ensureDirSync(downloadDir);
   fs.copy(song, path.join(downloadDir, path.basename(song)));
   const targetLocation = path.join(downloadDir, `cover${path.extname(picUrl)}`);
-  return axios.get(picUrl, {
-    responseType: 'stream',
-  }).then(response => {
-    response.data.pipe(fs.createWriteStream(targetLocation));
+  return new Promise((resolve, reject) => {
+    axios.get(picUrl, {
+      responseType: 'stream',
+    }).then(response => {
+      response.data
+        .pipe(fs.createWriteStream(targetLocation))
+        .end(() => {
+          console.log(colors.gray(path.basename(song, path.extname(song))));
+          resolve();
+        });
+    });
   });
 }
