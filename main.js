@@ -54,7 +54,7 @@ function handleSongs(songs) {
       return axios.get(`${NeteaseService}/album?id=${albumId}`);
     }).then((response) => {
       const { picUrl, name } = response.data.album;
-      const artist = songName.split('-')[0];
+      const artist = songName.split('-')[0].trim();
       const targetDir = path.join(targetPath, SORTED_DIR, artist, name);
       return organizeSong(song, picUrl, targetDir);
     }).then(() => {
