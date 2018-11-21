@@ -2,14 +2,15 @@ import FileSaver from 'file-saver';
 import { argv } from 'yargs';
 import axios from 'axios';
 import child_process from 'child_process';
-import color from 'color';
+import colors from 'colors';
 import fs from 'fs-extra';
 import klaw from 'klaw';
 import os from 'os';
 import path from 'path';
 
+const NODE_BIN = '/usr/local/bin/node';
 const API_SERVICE_PATH = path.resolve(__dirname, './NeteaseCloudMusicApi/app.js');
-child_process.spawn('/usr/local/bin/node', [API_SERVICE_PATH], {
+const serviceProcess = child_process.spawn(NODE_BIN, [API_SERVICE_PATH], {
   detached: true,
 });
 
@@ -26,13 +27,17 @@ klaw(targetPath)
 
 function checkApiServer() {
   axios.get(NeteaseService).then(() => {
-    console.log(color.green('开始处理...'));
+    console.log(colors.green('开始处理...'));
     const songs = items.filter(o => AUDIO_EXT.includes(path.extname(o)));
     handleSongs(songs);
-  }).catch(checkApiServer);
+  }).catch((error) => {
+    console.log(error.toString());
+    checkApiServer();
+  });
 }
 
 function handleSongs(songs) {
+  let count = 0;
   songs.forEach(song => {
     const songName = path.basename(song, path.extname(song));
     retrieveSongInfo(songName).then((info) => {
@@ -43,6 +48,11 @@ function handleSongs(songs) {
       const artist = songName.split('-')[0];
       const targetDir = path.join(targetPath, 'sorted', artist, name);
       return organizeSong(song, picUrl, targetDir);
+    }).then(() => {
+      count += 1;
+      if (count >= songs.length) {
+        serviceProcess.kill('SIGINT');
+      }
     }).catch((error) => {
       console.log(song, error.toString());
     });
