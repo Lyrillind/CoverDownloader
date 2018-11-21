@@ -83,7 +83,10 @@ function retrieveSongInfo(name) {
 
 function organizeSong(song, picUrl, downloadDir) {
   fs.ensureDirSync(downloadDir);
-  fs.move(song, path.join(downloadDir, path.basename(song)), { overwrite: true });
+  const filename = path.basename(song);
+  const songName = filename.indexOf('-') >= 0 ? filename.split('-')[1].trim() : filename;
+  const extname = path.extname(song);
+  fs.move(song, path.join(downloadDir, `${songName}${extname}`), { overwrite: true });
   const targetLocation = path.join(downloadDir, `cover${path.extname(picUrl)}`);
   return new Promise((resolve, reject) => {
     const downloadProcess = child_process.spawn('curl', [picUrl, '--output', targetLocation], {
