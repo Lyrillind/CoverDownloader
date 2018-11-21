@@ -66,7 +66,7 @@ function handleSongs(songs) {
         serviceProcess.kill('SIGINT');
       }
     }).catch((error) => {
-      console.log(colors.red('✕'), colors.gray(path.basename(song, path.extname(song))));
+      console.log(colors.red('✕'), colors.gray(path.basename(song, path.extname(song))), error.toString());
     });
   });
 }
