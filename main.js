@@ -2,6 +2,7 @@ import FileSaver from 'file-saver';
 import { argv } from 'yargs';
 import axios from 'axios';
 import child_process from 'child_process';
+import color from 'color';
 import fs from 'fs-extra';
 import klaw from 'klaw';
 import os from 'os';
@@ -18,16 +19,18 @@ const AUDIO_EXT = ['.flac','.mp3','.aac','.ogg','.m4a','.wav','.ape','.aiff'];
 
 const targetPath = argv.path ? argv.path.replace('~', os.homedir()) : '.';
 
-setTimeout(() => {
-  console.log('PROCESSING START...');
-  const items = [];
-  klaw(targetPath)
-    .on('data', item => items.push(item.path))
-    .on('end', () => {
-      const songs = items.filter(o => AUDIO_EXT.includes(path.extname(o)));
-      handleSongs(songs);
-    });
-}, 3000);
+const items = [];
+klaw(targetPath)
+  .on('data', item => items.push(item.path))
+  .on('end', checkApiServer);
+
+function checkApiServer() {
+  axios.get(NeteaseService).then(() => {
+    console.log(color.green('开始处理...'));
+    const songs = items.filter(o => AUDIO_EXT.includes(path.extname(o)));
+    handleSongs(songs);
+  }).catch(checkApiServer);
+}
 
 function handleSongs(songs) {
   songs.forEach(song => {
