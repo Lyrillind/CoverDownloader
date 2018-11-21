@@ -81,20 +81,31 @@ function retrieveSongInfo(name) {
 }
 
 function organizeSong(song, picUrl, downloadDir) {
-  process.stdout.write(colors.gray(`${path.basename(song, path.extname(song))}...`));
   fs.ensureDirSync(downloadDir);
   fs.copy(song, path.join(downloadDir, path.basename(song)));
   const targetLocation = path.join(downloadDir, `cover${path.extname(picUrl)}`);
   return new Promise((resolve, reject) => {
-    axios.get(picUrl, {
-      responseType: 'stream',
-    }).then(response => {
-      response.data
-        .pipe(fs.createWriteStream(targetLocation))
-        .end(() => {
-          console.log(colors.gray('DONE'));
+    const downloadProcess = child_process.spawn('curl', [picUrl, '--output', targetLocation], {
+      detached: true
+    });
+    downloadProcess.on('exit', () => {
+      if (fs.pathExistsSync(targetLocation)) {
+        const stats = fs.statSync(targetLocation);
+        if (stats.size > 0) {
+          console.log(colors.green('✓'), colors.gray(path.basename(song, path.extname(song))));
           resolve();
-        });
+          return;
+        }
+      }
+      retry(song, picUrl, downloadDir);
     });
   });
+}
+
+function retry(song, picUrl, downloadDir) {
+  const targetLocation = path.join(downloadDir, `cover${path.extname(picUrl)}`);
+  if (fs.pathExistsSync(targetLocation)) {
+    fs.removeSync(targetLocation);
+  }
+  organizeSong(song, picUrl, downloadDir);
 }
