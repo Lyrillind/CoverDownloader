@@ -49,14 +49,15 @@ function handleSongs(songs) {
   let count = 0;
   songs.sort((a, b) => path.basename(a) - path.basename(b));
   songs.forEach(song => {
-    const songName = path.basename(song, path.extname(song));
-    retrieveSongInfo(songName).then((info) => {
+    const filename = path.basename(song, path.extname(song));
+    let artist = filename.split('-')[0].trim();
+    retrieveSongInfo(filename).then((info) => {
       const albumId = info.al.id;
+      artist = info.ar ? info.ar[0].name : artist;
       return axios.get(`${NeteaseService}/album?id=${albumId}`);
     }).then((response) => {
       const { picUrl, name } = response.data.album;
-      const artist = songName.split('-')[0].trim();
-      const targetDir = path.join(targetPath, SORTED_DIR, artist, name);
+      const targetDir = path.join(targetPath, SORTED_DIR, artist, name.replace(/\//g, '\\/'));
       return organizeSong(song, picUrl, targetDir);
     }).then(() => {
       count += 1;
@@ -86,7 +87,7 @@ function organizeSong(song, picUrl, downloadDir) {
   const extname = path.extname(song);
   const filename = path.basename(song, extname);
   const songName = filename.indexOf('-') >= 0 ? filename.split('-')[1].trim() : filename;
-  fs.move(song, path.join(downloadDir, `${songName}${extname}`), { overwrite: true });
+
   const targetLocation = path.join(downloadDir, `cover${path.extname(picUrl)}`);
   return new Promise((resolve, reject) => {
     const downloadProcess = child_process.spawn('curl', [picUrl, '--output', targetLocation], {
@@ -96,6 +97,7 @@ function organizeSong(song, picUrl, downloadDir) {
       if (fs.pathExistsSync(targetLocation)) {
         const stats = fs.statSync(targetLocation);
         if (stats.size > 0) {
+          fs.moveSync(song, path.join(downloadDir, `${songName}${extname}`), { overwrite: true });
           console.log(colors.green('✓'), colors.gray(path.basename(song, path.extname(song))));
           resolve();
           return;
