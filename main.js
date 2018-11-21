@@ -93,7 +93,7 @@ function organizeSong(song, picUrl, downloadDir) {
       if (fs.pathExistsSync(targetLocation)) {
         const stats = fs.statSync(targetLocation);
         if (stats.size > 0) {
-          const filename = path.basename(song);
+          const filename = path.basename(song).trim();
           fs.moveSync(song, path.join(downloadDir, filename.replace(/\s+-\s+/g, '-')), { overwrite: true });
           console.log(colors.green('✓'), colors.gray(path.basename(song, path.extname(song))));
           resolve();
