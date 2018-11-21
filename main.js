@@ -7,26 +7,22 @@ import fs from 'fs-extra';
 import klaw from 'klaw';
 import os from 'os';
 import path from 'path';
+import process from 'process';
 
 const SORTED_DIR = 'SORTED';
-
-const NODE_BIN = '/usr/local/bin/node';
-const API_SERVICE_PATH = path.resolve(__dirname, './NeteaseCloudMusicApi/app.js');
-const serviceProcess = child_process.spawn(NODE_BIN, [API_SERVICE_PATH], {
-  detached: true,
-});
-
-const NeteaseService = 'http://localhost:3000';
 
 const AUDIO_EXT = ['.flac','.mp3','.aac','.ogg','.m4a','.wav','.ape','.aiff'];
 
 const targetPath = argv.path ? argv.path.replace('~', os.homedir()) : '.';
+
+const NeteaseService = 'http://localhost:3000';
 
 const items = [];
 klaw(targetPath)
   .on('data', item => items.push(item.path))
   .on('end', checkApiServer);
 
+let serviceProcess;
 function checkApiServer() {
   axios.get(NeteaseService).then(() => {
     console.log(colors.green('开始处理...'));
@@ -34,8 +30,16 @@ function checkApiServer() {
     handleSongs(songs);
   }).catch((error) => {
     if (error.code === 'ECONNREFUSED') {
+      if (!serviceProcess) {
+        const NODE_BIN = '/usr/local/bin/node';
+        const API_SERVICE_PATH = path.resolve(__dirname, './NeteaseCloudMusicApi/app.js');
+        serviceProcess = child_process.spawn(NODE_BIN, [API_SERVICE_PATH], {
+          detached: true,
+        });
+      }
       checkApiServer();
     } else {
+      if (!serviceProcess) return;
       serviceProcess.kill('SIGINT');
     }
   });
@@ -57,6 +61,7 @@ function handleSongs(songs) {
       count += 1;
       if (count >= songs.length) {
         console.log(colors.green('全部处理完成'));
+        if (!serviceProcess) return;
         serviceProcess.kill('SIGINT');
       }
     }).catch((error) => {
@@ -76,6 +81,7 @@ function retrieveSongInfo(name) {
 }
 
 function organizeSong(song, picUrl, downloadDir) {
+  process.stdout.write(colors.gray(`${path.basename(song, path.extname(song))}...`));
   fs.ensureDirSync(downloadDir);
   fs.copy(song, path.join(downloadDir, path.basename(song)));
   const targetLocation = path.join(downloadDir, `cover${path.extname(picUrl)}`);
@@ -86,7 +92,7 @@ function organizeSong(song, picUrl, downloadDir) {
       response.data
         .pipe(fs.createWriteStream(targetLocation))
         .end(() => {
-          console.log(colors.gray(path.basename(song, path.extname(song))));
+          console.log(colors.gray('DONE'));
           resolve();
         });
     });
