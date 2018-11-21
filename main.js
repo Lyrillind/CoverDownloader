@@ -47,6 +47,7 @@ function checkApiServer() {
 
 function handleSongs(songs) {
   let count = 0;
+  songs.sort((a, b) => path.basename(a) - path.basename(b));
   songs.forEach(song => {
     const songName = path.basename(song, path.extname(song));
     retrieveSongInfo(songName).then((info) => {
