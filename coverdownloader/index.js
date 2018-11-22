@@ -6,7 +6,6 @@ import fs from 'fs-extra';
 import klaw from 'klaw';
 import os from 'os';
 import path from 'path';
-import process from 'process';
 
 const SORTED_DIR = 'SORTED';
 const COVER_NAME = 'cover';
@@ -32,7 +31,7 @@ function checkApiServer() {
     if (error.code === 'ECONNREFUSED') {
       if (!serviceProcess) {
         const NODE_BIN = '/usr/local/bin/node';
-        const API_SERVICE_PATH = path.resolve(__dirname, './NeteaseCloudMusicApi/app.js');
+        const API_SERVICE_PATH = path.resolve(__dirname, '../NeteaseCloudMusicApi/app.js');
         serviceProcess = child_process.spawn(NODE_BIN, [API_SERVICE_PATH], {
           detached: true,
         });
