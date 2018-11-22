@@ -108,11 +108,15 @@ function organizeSong(song, songInfo, picUrl, downloadDir) {
           const filename = path.basename(song).trim();
           const dest = path.join(downloadDir, filename.replace(/\s+-\s+/g, '-'));
           fs.copySync(song, dest, { overwrite: true });
-          embedArtIntoSong(dest, songInfo, targetLocation, resolve);
-          return;
+          embedArtIntoSong(dest, songInfo, targetLocation, () => {
+            resolve();
+          });
+        } else {
+          retry(song, picUrl, downloadDir);
         }
+      } else {
+        retry(song, picUrl, downloadDir);
       }
-      retry(song, picUrl, downloadDir);
     });
   }).then(() => {
     console.log(colors.green('✓'), colors.gray(path.basename(song, path.extname(song))));
@@ -127,23 +131,24 @@ function retry(song, picUrl, downloadDir) {
   organizeSong(song, picUrl, downloadDir);
 }
 
-function embedArtIntoSong(song, songInfo, coverPath, resolve) {
+function embedArtIntoSong(song, songInfo, coverPath, callback) {
   const extname = path.extname(song);
   switch (extname) {
     case '.flac': {
-      handleFLACFile(song, songInfo, coverPath, resolve);
+      handleFLACFile(song, songInfo, coverPath, callback);
       break;
     }
     case '.mp3': {
-      handleMP3File(song, songInfo, coverPath, resolve);
+      handleMP3File(song, songInfo, coverPath, callback);
       break;
     }
     default:
+      callback && callback();
       break;
   }
 }
 
-function handleFLACFile(song, songInfo, coverPath, resolve) {
+function handleFLACFile(song, songInfo, coverPath, callback) {
   const readProcess = child_process.spawn('metaflac', ['--list', song]);
   readProcess.stdout.on('data', (data) => {
     const output = data.toString();
@@ -155,33 +160,27 @@ function handleFLACFile(song, songInfo, coverPath, resolve) {
         `--import-picture-from=${coverPath}`,
         song
       ]);
-      embedProcess.on('close', resolve);
+      embedProcess.on('close', callback);
+    } else {
+      callback && callback();
     }
   });
 }
 
-function handleMP3File(song, songInfo, coverPath, resolve) {
+function handleMP3File(song, songInfo, coverPath, callback) {
   const readProcess = child_process.spawn('id3v2', ['-l', song]);
   readProcess.stdout.on('data', (data) => {
     if (data.toString().indexOf('APIC (Attached picture)') < 0) {
-      const embedProcess = child_process.spawn('lame', [
-        `--ti`, coverPath,
+      child_process.spawnSync('id3v2', [
+        `-t`, `"${songInfo.title}"`,
+        `-a`, `"${songInfo.artist}"`,
+        `-A`, `"${songInfo.album}"`,
         song,
       ]);
-      embedProcess.on('close exit disconnect error message', (outputInfo) => {
-        console.log(outputInfo.toString());
-        if (outputInfo.toString().indexOf('Writing LAME Tag...done') >= 0) {
-          child_process.spawn('id3v2', [
-            `-t`, `"${songInfo.title}"`,
-            `-a`, `"${songInfo.artist}"`,
-            `-A`, `"${songInfo.album}"`,
-            song,
-          ]);
-          fs.removeSync(song);
-          fs.moveSync(`${song}.mp3`, song, { overwrite: true });
-          resolve();
-        }
-      });
+      child_process.spawnSync('lame', [ `--ti`, coverPath, song ]);
+      fs.removeSync(song);
+      fs.moveSync(`${song}.mp3`, song, { overwrite: true });
     }
+    callback && callback();
   });
 }
