@@ -55,7 +55,7 @@ function handleSongs(songs) {
     const filename = path.basename(song, path.extname(song));
     const title = filename.split('-').reverse()[0].trim();
     let artist = filename.replace(title, '').replace(/\s?-\s?$/, '')[0].trim();
-    retrieveSongInfo(filename).then((info) => {
+    retrieveSongInfo(title, artist).then((info) => {
       const albumId = info.al.id;
       artist = info.ar ? info.ar[0].name : artist;
       return axios.get(`${NeteaseService}/album?id=${albumId}`);
@@ -76,18 +76,30 @@ function handleSongs(songs) {
   });
 }
 
-function retrieveSongInfo(name) {
-  return axios.get(`${NeteaseService}/search?keywords=${encodeURIComponent(name)}`).then((response) => {
+function retrieveSongInfo(title, artist) {
+  return axios.get(`${NeteaseService}/search?keywords=${encodeURIComponent(`${artist} - ${title}`)}`).then((response) => {
     const { songs } = response.data.result;
-    const { id } = songs[0];
+    let songId = songs[0].id;
     for (let i = 0; i < songs.length; i++) {
       const song = songs[i];
-      const artist = song.artists[0].name;
+      const songArtist = song.artists[0].name;
       const songName = song.name;
-      if (name.indexOf(artist) >= 0 && name.indexOf(songName) >= 0) {
-        return axios.get(`${NeteaseService}/song/detail?ids=${id}`);
+      // 猜测算法
+      if (artist === songArtist && title === songName) {
+        songId = song.id;
+        break;
+      } else if (artist.indexOf(songArtist) >= 0 && title.indexOf(songName) >= 0) {
+        songId = song.id;
+        break;
+      } else if (artist === songArtist || title === songName) {
+        songId = song.id;
+        break;
+      } else if (artist.indexOf(songArtist) >= 0 || title.indexOf(songName) >= 0) {
+        songId = song.id;
+        break;
       }
     }
+    return axios.get(`${NeteaseService}/song/detail?ids=${songId}`);
   }).then((response) => {
     return response.data.songs[0];
   });
