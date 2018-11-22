@@ -81,7 +81,14 @@ function retrieveSongInfo(name) {
   return axios.get(`${NeteaseService}/search?keywords=${encodeURIComponent(name)}`).then((response) => {
     const { songs } = response.data.result;
     const { id } = songs[0];
-    return axios.get(`${NeteaseService}/song/detail?ids=${id}`);
+    for (let i = 0; i < songs.length; i++) {
+      const song = songs[i];
+      const artist = song.artists[0].name;
+      const songName = song.name;
+      if (name.indexOf(artist) >= 0 && name.indexOf(songName) >= 0) {
+        return axios.get(`${NeteaseService}/song/detail?ids=${id}`);
+      }
+    }
   }).then((response) => {
     return response.data.songs[0];
   });
