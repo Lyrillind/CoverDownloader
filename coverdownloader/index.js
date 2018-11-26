@@ -26,7 +26,7 @@ let serviceProcess;
 function checkApiServer() {
   axios.get(NeteaseService).then(() => {
     console.log(colors.green('开始处理...'));
-    const songs = items.filter(o => o.indexOf(SORTED_DIR) < 0 && AUDIO_EXT.includes(path.extname(o)));
+    const songs = items.filter(o => o.indexOf(SORTED_DIR) < 0 && AUDIO_EXT.includes(path.extname(o).toLowerCase()));
     handleSongs(songs);
   }).catch((error) => {
     if (error.code === 'ECONNREFUSED') {
@@ -74,6 +74,7 @@ function handleSongs(songs) {
         serviceProcess.kill('SIGINT');
       }
     }).catch((error) => {
+      if (error.message === 'noinfo') return;
       console.log(colors.red('✕'), colors.gray(path.basename(song, path.extname(song))), error.toString());
     });
   });
@@ -82,6 +83,7 @@ function handleSongs(songs) {
 function retrieveSongInfo(title, artist) {
   return axios.get(`${NeteaseService}/search?keywords=${encodeURIComponent(`${artist} ${title}`).trim()}`).then((response) => {
     const { songs } = response.data.result;
+    if (!songs) throw new Error('noinfo');
     let songId = songs[0].id;
     for (let i = 0; i < songs.length; i++) {
       const song = songs[i];
@@ -115,7 +117,7 @@ function organizeSong(song, songInfo, picUrl, downloadDir) {
         if (stats.size > 0) {
           const filename = path.basename(song).trim();
           const dest = path.join(downloadDir, filename.replace(/\s+-\s+/g, '-'));
-          fs.copySync(song, dest, { overwrite: true });
+          fs.moveSync(song, dest, { overwrite: true });
           embedArtIntoSong(dest, songInfo, targetLocation, () => {
             resolve();
           });

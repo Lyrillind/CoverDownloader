@@ -18,7 +18,7 @@ const targetPath = argv.path ? argv.path.replace('~', os.homedir()) : '.';
 const items = [];
 klaw(targetPath)
   .on('data', item => {
-    if (!AUDIO_EXT.includes(path.extname(item.path))) return;
+    if (!AUDIO_EXT.includes(path.extname(item.path).toLowerCase())) return;
     items.push(item.path)
   })
   .on('end', flattenFolder);

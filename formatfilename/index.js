@@ -16,7 +16,7 @@ const DIR_NAME = 'FORMATED';
 const items = [];
 klaw(targetPath)
   .on('data', item => {
-    if (!AUDIO_EXT.includes(path.extname(item.path))) return;
+    if (!AUDIO_EXT.includes(path.extname(item.path).toLowerCase())) return;
     if (path.dirname(item.path).indexOf(DIR_NAME) > 0) return;
     items.push(item.path);
   })
