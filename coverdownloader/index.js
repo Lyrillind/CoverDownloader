@@ -74,8 +74,7 @@ function handleSongs(songs) {
         serviceProcess.kill('SIGINT');
       }
     }).catch((error) => {
-      if (error.message === 'noinfo') return;
-      console.log(colors.red('✕'), colors.gray(path.basename(song, path.extname(song))), error.toString());
+      console.log(colors.red('✕'), colors.gray(path.basename(song, path.extname(song))), error.message || error.toString());
     });
   });
 }
@@ -114,7 +113,7 @@ function organizeSong(song, songInfo, picUrl, downloadDir) {
     downloadProcess.on('error', reject);
     downloadProcess.on('exit', (code, signal) => {
       if (code !== 0) {
-        reject({ code, signal });
+        reject({ code, signal, message: `${code} - ${signal}` });
       } else {
         if (fs.pathExistsSync(targetLocation)) {
           const stats = fs.statSync(targetLocation);
