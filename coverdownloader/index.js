@@ -111,21 +111,26 @@ function organizeSong(song, songInfo, picUrl, downloadDir) {
     const downloadProcess = child_process.spawn('curl', [picUrl, '--output', targetLocation], {
       detached: true
     });
-    downloadProcess.on('exit', () => {
-      if (fs.pathExistsSync(targetLocation)) {
-        const stats = fs.statSync(targetLocation);
-        if (stats.size > 0) {
-          const filename = path.basename(song).trim();
-          const dest = path.join(downloadDir, filename.replace(/\s+-\s+/g, '-'));
-          fs.moveSync(song, dest, { overwrite: true });
-          embedArtIntoSong(dest, songInfo, targetLocation, () => {
-            resolve();
-          });
+    downloadProcess.on('error', reject);
+    downloadProcess.on('exit', (code, signal) => {
+      if (code !== 0) {
+        reject({ code, signal });
+      } else {
+        if (fs.pathExistsSync(targetLocation)) {
+          const stats = fs.statSync(targetLocation);
+          if (stats.size > 0) {
+            const filename = path.basename(song).trim();
+            const dest = path.join(downloadDir, filename.replace(/\s+-\s+/g, '-'));
+            fs.moveSync(song, dest, { overwrite: true });
+            embedArtIntoSong(dest, songInfo, targetLocation, () => {
+              resolve(code);
+            });
+          } else {
+            retry(song, picUrl, downloadDir);
+          }
         } else {
           retry(song, picUrl, downloadDir);
         }
-      } else {
-        retry(song, picUrl, downloadDir);
       }
     });
   }).then(() => {
