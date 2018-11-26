@@ -178,38 +178,25 @@ function embedArtIntoSong(song, songInfo, coverPath, callback) {
 }
 
 function handleFLACFile(song, songInfo, coverPath, callback) {
-  const readProcess = child_process.spawn('metaflac', ['--list', song]);
-  readProcess.stdout.on('data', (data) => {
-    const output = data.toString();
-    if (output.indexOf('type: 3 (Cover (front))') < 0) {
-      const embedProcess = child_process.spawn('metaflac', [
-        `--set-tag=TITLE=${songInfo.title}`,
-        `--set-tag=ALBUM=${songInfo.album}`,
-        `--set-tag=ARTIST=${songInfo.artist}`,
-        `--import-picture-from=${coverPath}`,
-        song
-      ]);
-      embedProcess.on('close', callback);
-    } else {
-      callback && callback();
-    }
-  });
+  const embedProcess = child_process.spawn('metaflac', [
+    `--set-tag=TITLE=${songInfo.title}`,
+    `--set-tag=ALBUM=${songInfo.album}`,
+    `--set-tag=ARTIST=${songInfo.artist}`,
+    `--import-picture-from=${coverPath}`,
+    song
+  ]);
+  embedProcess.on('close', callback);
 }
 
 function handleMP3File(song, songInfo, coverPath, callback) {
-  const readProcess = child_process.spawn('id3v2', ['-l', song]);
-  readProcess.stdout.on('data', (data) => {
-    if (data.toString().indexOf('APIC (Attached picture)') < 0) {
-      child_process.spawnSync('id3v2', [
-        `-t`, `"${songInfo.title}"`,
-        `-a`, `"${songInfo.artist}"`,
-        `-A`, `"${songInfo.album}"`,
-        song,
-      ]);
-      child_process.spawnSync('lame', [ `--ti`, coverPath, song ]);
-      fs.removeSync(song);
-      fs.moveSync(`${song}.mp3`, song, { overwrite: true });
-    }
-    callback && callback();
-  });
+  child_process.spawnSync('id3v2', [
+    `-t`, `"${songInfo.title}"`,
+    `-a`, `"${songInfo.artist}"`,
+    `-A`, `"${songInfo.album}"`,
+    song,
+  ]);
+  child_process.spawnSync('lame', [ `--ti`, coverPath, song ]);
+  fs.removeSync(song);
+  fs.moveSync(`${song}.mp3`, song, { overwrite: true });
+  callback && callback();
 }
