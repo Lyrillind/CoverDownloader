@@ -162,7 +162,7 @@ function getSongInfoFromFile(song) {
 
 function embedArtIntoSong(song, songInfo, coverPath, callback) {
   const extname = path.extname(song);
-  switch (extname) {
+  switch (extname.toLowerCase()) {
     case '.flac': {
       handleFLACFile(song, songInfo, coverPath, callback);
       break;
