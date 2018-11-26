@@ -120,7 +120,7 @@ function organizeSong(song, songInfo, picUrl, downloadDir) {
           const stats = fs.statSync(targetLocation);
           if (stats.size > 0) {
             const filename = path.basename(song).trim();
-            const dest = path.join(downloadDir, filename.replace(/\s+-\s+/g, '-'));
+            const dest = path.join(downloadDir, filename.replace(/\s+-\s+/g, ' - '));
             fs.moveSync(song, dest, { overwrite: true });
             embedArtIntoSong(dest, songInfo, targetLocation, () => {
               resolve(code);
