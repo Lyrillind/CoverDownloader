@@ -34,9 +34,10 @@ function formatFilename(callback) {
     mm.parseFile(item)
       .then( metadata => {
         const { title, artist } = metadata.common;
-        const newFilename = `${artist} - ${title}${extname}`;
+        if (!artist) return;
+        const newFilename = `${escapeString(artist)} - ${escapeString(title)}${extname}`;
         const originFilename = path.basename(item);
-        const guess = new RegExp(`^${escapeStringRegexp(artist)}\\s?-\\s?${escapeStringRegexp(title)}${path.extname(item)}$`, 'i');
+        const guess = new RegExp(`^${escapeString(artist)}\\s?-\\s?${escapeString(title)}${path.extname(item)}$`, 'i');
         if (!guess.test(originFilename)) {
           callback && callback(item, newFilename);
         }
@@ -45,4 +46,10 @@ function formatFilename(callback) {
         console.error(err.message);
       });
   });
+}
+
+function escapeString(str) {
+  if (!str) return str;
+  const strToReturn = str.replace(/\//g, '／');
+  return escapeStringRegexp(strToReturn);
 }
