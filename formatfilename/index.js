@@ -23,7 +23,7 @@ klaw(targetPath)
   .on('end', () => formatFilename((song, newFilename) => {
     if (!newFilename) return;
     fs.move(song, path.join(targetPath, DIR_NAME, newFilename), err => {
-      if (err) return console.error(err);
+      if (err) return console.log(colors.gray(path.basename(song)), '=>', colors.gray(newFilename), err.toString());
       console.log(colors.green('✓'), colors.gray(`${path.basename(song)} => ${newFilename}`));
     });
   }));
@@ -35,9 +35,10 @@ function formatFilename(callback) {
       .then( metadata => {
         const { title, artist } = metadata.common;
         if (!artist) return;
-        const newFilename = `${escapeString(artist)} - ${escapeString(title)}${extname}`;
+        const songTitle = title || path.basename(item, extname);
+        const newFilename = `${escapeString(artist)} - ${escapeString(songTitle)}${extname}`;
         const originFilename = path.basename(item);
-        const guess = new RegExp(`^${escapeString(artist)}\\s?-\\s?${escapeString(title)}${path.extname(item)}$`, 'i');
+        const guess = new RegExp(`^${escapeString(artist)}\\s?-\\s?${escapeString(songTitle)}${path.extname(item)}$`, 'i');
         if (!guess.test(originFilename)) {
           callback && callback(item, newFilename);
         }
