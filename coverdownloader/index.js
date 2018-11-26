@@ -52,8 +52,8 @@ function checkApiServer() {
 function handleSongs(songs) {
   let count = 0;
   songs.sort((a, b) => path.basename(a) - path.basename(b));
+  let title, artist;
   songs.forEach(song => {
-    let title, artist;
     return getSongInfoFromFile(song).then(({ songTitle, songArtist}) => {
       title = songTitle;
       artist = songArtist;
