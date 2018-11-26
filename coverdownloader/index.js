@@ -6,6 +6,7 @@ import fs from 'fs-extra';
 import klaw from 'klaw';
 import os from 'os';
 import path from 'path';
+import * as mm from 'music-metadata';
 
 const SORTED_DIR = 'SORTED';
 const COVER_NAME = 'cover';
@@ -52,10 +53,12 @@ function handleSongs(songs) {
   let count = 0;
   songs.sort((a, b) => path.basename(a) - path.basename(b));
   songs.forEach(song => {
-    const filename = path.basename(song, path.extname(song));
-    const title = filename.split('-').reverse()[0].trim();
-    let artist = filename.replace(title, '').replace(/\s?-\s?$/, '')[0].trim();
-    retrieveSongInfo(title, artist).then((info) => {
+    let title, artist;
+    return getSongInfoFromFile(song).then(({ songTitle, songArtist}) => {
+      title = songTitle;
+      artist = songArtist;
+      return retrieveSongInfo(title, artist);
+    }).then((info) => {
       const albumId = info.al.id;
       artist = info.ar ? info.ar[0].name : artist;
       return axios.get(`${NeteaseService}/album?id=${albumId}`);
@@ -77,7 +80,7 @@ function handleSongs(songs) {
 }
 
 function retrieveSongInfo(title, artist) {
-  return axios.get(`${NeteaseService}/search?keywords=${encodeURIComponent(`${artist} - ${title}`)}`).then((response) => {
+  return axios.get(`${NeteaseService}/search?keywords=${encodeURIComponent(`${artist} ${title}`).trim()}`).then((response) => {
     const { songs } = response.data.result;
     let songId = songs[0].id;
     for (let i = 0; i < songs.length; i++) {
@@ -89,12 +92,6 @@ function retrieveSongInfo(title, artist) {
         songId = song.id;
         break;
       } else if (artist.indexOf(songArtist) >= 0 && title.indexOf(songName) >= 0) {
-        songId = song.id;
-        break;
-      } else if (artist === songArtist || title === songName) {
-        songId = song.id;
-        break;
-      } else if (artist.indexOf(songArtist) >= 0 || title.indexOf(songName) >= 0) {
         songId = song.id;
         break;
       }
@@ -140,6 +137,21 @@ function retry(song, picUrl, downloadDir) {
     fs.removeSync(targetLocation);
   }
   organizeSong(song, picUrl, downloadDir);
+}
+
+function getSongInfoFromFile(song) {
+  const extname = path.extname(song);
+  return mm.parseFile(song)
+    .then( metadata => {
+      const filename = path.basename(song, extname);
+
+      const { title, artist } = metadata.common;
+
+      const songTitle = title || filename.split('-').reverse()[0].trim();
+      const songArtist = artist || filename.replace(songTitle, '').replace(/\s?-\s?$/, '').trim();
+
+      return { songArtist, songTitle };
+    });
 }
 
 function embedArtIntoSong(song, songInfo, coverPath, callback) {
